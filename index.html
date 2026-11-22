@@ -5,18 +5,37 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <title>YT</title>
-<style>html,body{margin:0;height:100%;background:#000}iframe{position:fixed;inset:0;width:100%;height:100%;border:0}</style>
+<style>html,body{margin:0;height:100%;background:#000}#p,iframe{position:fixed;inset:0;width:100%;height:100%;border:0}</style>
 </head>
 <body>
+<div id="p"></div>
 <script>
-var v = (new URLSearchParams(location.search).get("v") || "").replace(/[^A-Za-z0-9_-]/g, "");
+var q = new URLSearchParams(location.search);
+var v = (q.get("v") || "").replace(/[^A-Za-z0-9_-]/g, "");
+var start = Math.max(0, parseInt(q.get("t") || "0", 10) || 0);
+var player;
+function send(t) {
+  try { parent.postMessage({ type: "yt-pos", v: v, t: Math.floor(t), d: Math.floor(player.getDuration() || 0) }, "*"); } catch (e) {}
+}
+function onYouTubeIframeAPIReady() {
+  player = new YT.Player("p", {
+    videoId: v,
+    playerVars: { autoplay: 1, playsinline: 1, rel: 0, start: start },
+    events: {
+      onStateChange: function (e) {
+        if (e.data === YT.PlayerState.ENDED) send(0);
+        else if (e.data === YT.PlayerState.PAUSED) send(player.getCurrentTime());
+      }
+    }
+  });
+  setInterval(function () {
+    if (player && player.getPlayerState && player.getPlayerState() === YT.PlayerState.PLAYING) send(player.getCurrentTime());
+  }, 5000);
+}
 if (v) {
-  var f = document.createElement("iframe");
-  f.src = "https://www.youtube.com/embed/" + v + "?autoplay=1&playsinline=1&rel=0";
-  f.allow = "autoplay; encrypted-media; picture-in-picture; fullscreen";
-  f.allowFullscreen = true;
-  f.referrerPolicy = "strict-origin-when-cross-origin";
-  document.body.appendChild(f);
+  var s = document.createElement("script");
+  s.src = "https://www.youtube.com/iframe_api";
+  document.head.appendChild(s);
 }
 </script>
 </body>
