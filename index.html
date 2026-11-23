@@ -46,7 +46,7 @@ function onYouTubeIframeAPIReady() {
 }
 window.addEventListener("message", function (e) {
   var m = e.data;
-  if (!m || !player || !player.seekTo) return;
+  if (!m || typeof m !== "object" || typeof m.type !== "string" || m.type.indexOf("yt-") !== 0 || !player || !player.seekTo) return;
   if (m.type === "yt-seek") { player.seekTo(m.t, true); player.playVideo(); }
   if (m.type === "yt-skip") { player.seekTo(Math.max(0, player.getCurrentTime() + m.d), true); }
   if (m.type === "yt-toggle") { if (player.getPlayerState() === YT.PlayerState.PLAYING) player.pauseVideo(); else player.playVideo(); }
