@@ -15,23 +15,31 @@ var v = (q.get("v") || "").replace(/[^A-Za-z0-9_-]/g, "");
 var start = Math.max(0, parseInt(q.get("t") || "0", 10) || 0);
 var player;
 function send(t) {
-  try { parent.postMessage({ type: "yt-pos", v: v, t: Math.floor(t), d: Math.floor(player.getDuration() || 0) }, "*"); } catch (e) {}
+  try {
+    parent.postMessage({ type: "yt-pos", v: v, t: t, d: Math.floor(player.getDuration() || 0), s: player.getPlayerState ? player.getPlayerState() : -1 }, "*");
+  } catch (e) {}
 }
 function onYouTubeIframeAPIReady() {
   player = new YT.Player("p", {
     videoId: v,
-    playerVars: { autoplay: 1, playsinline: 1, rel: 0, start: start },
+    playerVars: { autoplay: 1, playsinline: 1, rel: 0, start: start, cc_load_policy: 0 },
     events: {
       onStateChange: function (e) {
         if (e.data === YT.PlayerState.ENDED) send(0);
-        else if (e.data === YT.PlayerState.PAUSED) send(player.getCurrentTime());
+        else send(player.getCurrentTime());
       }
     }
   });
   setInterval(function () {
     if (player && player.getPlayerState && player.getPlayerState() === YT.PlayerState.PLAYING) send(player.getCurrentTime());
-  }, 5000);
+  }, 1000);
 }
+window.addEventListener("message", function (e) {
+  var m = e.data;
+  if (!m || !player || !player.seekTo) return;
+  if (m.type === "yt-seek") { player.seekTo(m.t, true); player.playVideo(); }
+  if (m.type === "yt-toggle") { if (player.getPlayerState() === YT.PlayerState.PLAYING) player.pauseVideo(); else player.playVideo(); }
+});
 if (v) {
   var s = document.createElement("script");
   s.src = "https://www.youtube.com/iframe_api";
