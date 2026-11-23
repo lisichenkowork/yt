@@ -15,6 +15,11 @@ var v = (q.get("v") || "").replace(/[^A-Za-z0-9_-]/g, "");
 var start = Math.max(0, parseInt(q.get("t") || "0", 10) || 0);
 var bare = q.get("c") === "0";
 var player;
+function noCC() {
+  try { player.unloadModule("captions"); } catch (e) {}
+  try { player.unloadModule("cc"); } catch (e) {}
+  try { player.setOption("captions", "track", {}); } catch (e) {}
+}
 function send(t) {
   try {
     parent.postMessage({ type: "yt-pos", v: v, t: t, d: Math.floor(player.getDuration() || 0), s: player.getPlayerState ? player.getPlayerState() : -1, r: player.getPlaybackRate ? player.getPlaybackRate() : 1, m: player.isMuted ? player.isMuted() : false }, "*");
@@ -25,8 +30,10 @@ function onYouTubeIframeAPIReady() {
     videoId: v,
     playerVars: { autoplay: 1, playsinline: 1, rel: 0, start: start, cc_load_policy: 0, controls: bare ? 0 : 1, disablekb: bare ? 1 : 0, iv_load_policy: 3, fs: bare ? 0 : 1 },
     events: {
-      onReady: function () { send(player.getCurrentTime()); },
+      onReady: function () { noCC(); send(player.getCurrentTime()); },
+      onApiChange: function () { noCC(); },
       onStateChange: function (e) {
+        if (e.data === YT.PlayerState.PLAYING) noCC();
         if (e.data === YT.PlayerState.ENDED) send(0);
         else send(player.getCurrentTime());
       },
